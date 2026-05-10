@@ -28,11 +28,32 @@ const clerkAppearance = {
   },
 };
 
+/** After sign-in / sign-up / magic link — absolute URL on prod helps Clerk send users back to your deployment. */
+function clerkAfterAuthRedirectUrls(): {
+  signInFallbackRedirectUrl: string;
+  signUpFallbackRedirectUrl: string;
+} {
+  const explicitIn =
+    process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL?.trim();
+  const explicitUp =
+    process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL?.trim();
+  const base = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  const derived =
+    base && base.startsWith("http") ? `${base}/projects` : "/projects";
+
+  return {
+    signInFallbackRedirectUrl: explicitIn || derived,
+    signUpFallbackRedirectUrl: explicitUp || derived,
+  };
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const redirects = clerkAfterAuthRedirectUrls();
+
   return (
     <html
       lang="en"
@@ -41,8 +62,8 @@ export default function RootLayout({
       <body className="h-full text-text-primary overflow-hidden">
         <ClerkProvider
           appearance={clerkAppearance}
-          signInFallbackRedirectUrl="/projects"
-          signUpFallbackRedirectUrl="/projects"
+          signInFallbackRedirectUrl={redirects.signInFallbackRedirectUrl}
+          signUpFallbackRedirectUrl={redirects.signUpFallbackRedirectUrl}
         >
           <AppShell>{children}</AppShell>
         </ClerkProvider>

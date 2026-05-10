@@ -15,7 +15,13 @@ import {
   Users,
 } from "lucide-react";
 import { SHARKDESK_LOGO_URL } from "@/lib/branding";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import {
+  Show,
+  SignInButton,
+  SignOutButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
 import { OrganizationSidebarSection } from "@/components/layout/OrganizationSidebarSection";
 import {
   useSidebar,
@@ -23,7 +29,7 @@ import {
   SIDEBAR_EXPANDED_W,
 } from "@/components/layout/sidebar-context";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const NAV_ITEMS = [
   { name: "Projects", href: "/projects", icon: LayoutDashboard },
@@ -35,6 +41,24 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebar();
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handlePointerDown(e: PointerEvent) {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(e.target as Node)
+      ) {
+        setAccountMenuOpen(false);
+      }
+    }
+    if (accountMenuOpen) {
+      document.addEventListener("pointerdown", handlePointerDown);
+      return () =>
+        document.removeEventListener("pointerdown", handlePointerDown);
+    }
+  }, [accountMenuOpen]);
 
   const userButtonAppearance = useMemo(
     () => ({
@@ -211,17 +235,51 @@ export function Sidebar() {
         </Show>
         <Show when="signed-in">
           <div
+            ref={accountMenuRef}
             className={cn(
-              "group relative flex items-center rounded-xl border border-transparent px-2 py-1.5 transition-colors hover:border-[#1F2937] hover:bg-[#121826]/40",
-              collapsed ? "justify-center" : "w-full",
+              "relative flex rounded-xl border border-transparent px-2 py-1.5 transition-colors hover:border-[#1F2937] hover:bg-[#121826]/40",
+              collapsed
+                ? "flex-col items-center gap-1"
+                : "w-full items-center pr-10",
             )}
           >
             <UserButton
               showName={!collapsed}
               appearance={userButtonAppearance}
             />
-            {!collapsed ? (
-              <Settings className="pointer-events-none absolute right-3 h-4 w-4 text-[#555] transition-colors group-hover:text-[#9CA3AF]" />
+            <button
+              type="button"
+              onClick={() => setAccountMenuOpen((v) => !v)}
+              aria-expanded={accountMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Account menu"
+              className={cn(
+                "rounded-lg p-1.5 text-[#6B7280] outline-none transition-colors hover:bg-[#1a2235] hover:text-[#E5E7EB] focus-visible:ring-2 focus-visible:ring-[#14B8A6]/40",
+                collapsed ? "shrink-0" : "absolute right-2 top-1/2 -translate-y-1/2",
+              )}
+            >
+              <Settings className="h-4 w-4" strokeWidth={2} />
+            </button>
+            {accountMenuOpen ? (
+              <div
+                role="menu"
+                className={cn(
+                  "absolute z-[70] min-w-[200px] overflow-hidden rounded-xl border border-[#1F2937] bg-[#121826] py-1 shadow-[0_16px_48px_rgba(0,0,0,0.45)] ring-1 ring-black/20",
+                  collapsed
+                    ? "bottom-full left-1/2 mb-2 -translate-x-1/2"
+                    : "bottom-full right-0 mb-2",
+                )}
+              >
+                <SignOutButton redirectUrl="/">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full px-4 py-2.5 text-left text-sm font-medium text-[#E5E7EB] transition-colors hover:bg-[#1a2235]"
+                  >
+                    Sign out
+                  </button>
+                </SignOutButton>
+              </div>
             ) : null}
           </div>
         </Show>
