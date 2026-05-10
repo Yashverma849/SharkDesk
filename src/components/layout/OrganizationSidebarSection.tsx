@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Users } from "lucide-react";
 import { Show, useOrganization } from "@clerk/nextjs";
 import { useSidebar } from "@/components/layout/sidebar-context";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import { cn } from "@/lib/utils";
 
 export function OrganizationSidebarSection() {
@@ -22,11 +23,11 @@ function OrganizationSidebarInner() {
     return (
       <div
         className={cn(
-          "mb-3 animate-pulse rounded-xl border border-[#1F2937] bg-[#121826]/60",
-          collapsed ? "mx-2 px-2 py-3" : "mx-3 px-3 py-3",
+          "mb-3 flex justify-center rounded-xl border border-[#1F2937]/80 bg-[#0B0F1A]/40",
+          collapsed ? "mx-2 py-2" : "mx-3 py-2",
         )}
       >
-        <div className="mx-auto h-8 w-8 rounded-full bg-[#1F2937]" />
+        <LogoLoader size="sidebar" />
       </div>
     );
   }

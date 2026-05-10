@@ -10,17 +10,22 @@ import {
   ChevronRight,
   LayoutDashboard,
   LogIn,
+  LogOut,
   Settings,
+  User,
   UserPlus,
   Users,
 } from "lucide-react";
 import { SHARKDESK_LOGO_URL } from "@/lib/branding";
+import { sharkdeskClerkAppearance } from "@/lib/clerk-appearance";
 import {
   Show,
   SignInButton,
   SignOutButton,
   SignUpButton,
-  UserButton,
+  UserAvatar,
+  useClerk,
+  useUser,
 } from "@clerk/nextjs";
 import { OrganizationSidebarSection } from "@/components/layout/OrganizationSidebarSection";
 import {
@@ -29,7 +34,7 @@ import {
   SIDEBAR_EXPANDED_W,
 } from "@/components/layout/sidebar-context";
 import { cn } from "@/lib/utils";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const NAV_ITEMS = [
   { name: "Projects", href: "/projects", icon: LayoutDashboard },
@@ -41,6 +46,8 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebar();
+  const { user } = useUser();
+  const { openUserProfile } = useClerk();
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -60,43 +67,12 @@ export function Sidebar() {
     }
   }, [accountMenuOpen]);
 
-  const userButtonAppearance = useMemo(
-    () => ({
-      variables: {
-        colorText: "#E5E7EB",
-      },
-      elements: {
-        avatarBox: cn(
-          "ring-2 ring-[#1F2937] shadow-[0_0_12px_rgba(20,184,166,0.15)",
-          collapsed ? "order-none w-9 h-9" : "order-1 w-8 h-8",
-        ),
-        userButtonPopoverCard:
-          "bg-[#121826] border border-[#1F2937] shadow-xl rounded-xl",
-        userButtonPopoverActionButton:
-          "text-[#E5E7EB] hover:bg-[#1a2235] rounded-lg",
-        userButtonPopoverFooter: "hidden",
-        userPreviewMainIdentifier: "text-white font-medium text-sm",
-        userPreviewSecondaryIdentifier: "text-[#9CA3AF] text-xs",
-        userButtonTrigger: cn(
-          "focus:shadow-none hover:bg-transparent",
-          collapsed
-            ? "!justify-center w-full"
-            : "!justify-start w-full",
-        ),
-        userButtonBox: cn(
-          "flex items-center gap-3",
-          collapsed && "!justify-center gap-0",
-        ),
-        userButtonOuterIdentifier: cn(
-          "font-medium text-sm truncate",
-          collapsed ? "!hidden" : "!text-white order-2",
-        ),
-      },
-    }),
-    [collapsed],
-  );
-
   const asideWidth = collapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_EXPANDED_W;
+
+  function handleManageAccount() {
+    openUserProfile({ appearance: sharkdeskClerkAppearance });
+    setAccountMenuOpen(false);
+  }
 
   return (
     <aside
@@ -243,10 +219,31 @@ export function Sidebar() {
                 : "w-full items-center pr-10",
             )}
           >
-            <UserButton
-              showName={!collapsed}
-              appearance={userButtonAppearance}
-            />
+            <div
+              className={cn(
+                "flex min-w-0 items-center gap-3",
+                collapsed ? "flex-col gap-1" : "flex-1",
+              )}
+            >
+              <UserAvatar
+                rounded
+                appearance={{
+                  elements: {
+                    avatarBox: cn(
+                      "ring-2 ring-[#1F2937] shadow-[0_0_12px_rgba(20,184,166,0.15)",
+                      collapsed ? "!h-9 !w-9" : "!h-8 !w-8",
+                    ),
+                  },
+                }}
+              />
+              {!collapsed ? (
+                <span className="truncate text-sm font-medium text-[#E5E7EB]">
+                  {user?.fullName ||
+                    user?.primaryEmailAddress?.emailAddress ||
+                    "Account"}
+                </span>
+              ) : null}
+            </div>
             <button
               type="button"
               onClick={() => setAccountMenuOpen((v) => !v)}
@@ -264,18 +261,28 @@ export function Sidebar() {
               <div
                 role="menu"
                 className={cn(
-                  "absolute z-[70] min-w-[200px] overflow-hidden rounded-xl border border-[#1F2937] bg-[#121826] py-1 shadow-[0_16px_48px_rgba(0,0,0,0.45)] ring-1 ring-black/20",
+                  "absolute z-[70] min-w-[220px] overflow-hidden rounded-xl border border-[#1F2937] bg-[#121826] py-1 shadow-[0_16px_48px_rgba(0,0,0,0.45)] ring-1 ring-black/20",
                   collapsed
                     ? "bottom-full left-1/2 mb-2 -translate-x-1/2"
                     : "bottom-full right-0 mb-2",
                 )}
               >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleManageAccount}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[#E5E7EB] transition-colors hover:bg-[#1a2235]"
+                >
+                  <User className="h-4 w-4 shrink-0 text-[#9CA3AF]" strokeWidth={2} />
+                  Manage account
+                </button>
                 <SignOutButton redirectUrl="/">
                   <button
                     type="button"
                     role="menuitem"
-                    className="flex w-full px-4 py-2.5 text-left text-sm font-medium text-[#E5E7EB] transition-colors hover:bg-[#1a2235]"
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[#E5E7EB] transition-colors hover:bg-[#1a2235]"
                   >
+                    <LogOut className="h-4 w-4 shrink-0 text-[#9CA3AF]" strokeWidth={2} />
                     Sign out
                   </button>
                 </SignOutButton>

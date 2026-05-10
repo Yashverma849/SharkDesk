@@ -7,6 +7,7 @@ import type { Task } from "@/components/ui/TaskTable";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import { Plus } from "lucide-react";
 import { createTaskAction } from "@/app/actions/tasks";
 
@@ -116,8 +117,8 @@ export function MyWorkClient({ initialTasks, projects }: Props) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Create task"}
+            <Button type="submit" disabled={pending} aria-busy={pending}>
+              {pending ? <LogoLoader size="button" /> : "Create task"}
             </Button>
           </div>
         </form>

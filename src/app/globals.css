@@ -87,3 +87,18 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(20, 184, 166, 0.5); /* teal-primary */
 }
+
+/* Site-wide loading indicator (see LogoLoader) */
+@keyframes sharkdesk-logo-pulse {
+  0%,
+  100% {
+    opacity: 0.38;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-sharkdesk-logo-pulse {
+  animation: sharkdesk-logo-pulse 1.45s ease-in-out infinite;
+}

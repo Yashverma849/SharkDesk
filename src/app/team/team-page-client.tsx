@@ -7,6 +7,7 @@ import {
   useUser,
 } from "@clerk/nextjs";
 import { Users } from "lucide-react";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import { cn } from "@/lib/utils";
 import { formatOrganizationRole } from "@/lib/clerk-org-role";
 
@@ -31,12 +32,7 @@ export function TeamPageClient() {
   });
 
   if (!isLoaded) {
-    return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-10 w-48 rounded-lg bg-[#121826]" />
-        <div className="h-64 rounded-xl bg-[#121826]" />
-      </div>
-    );
+    return <LogoLoader size="page" />;
   }
 
   if (!organization) {

@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { SHARKDESK_LOGO_URL } from "@/lib/branding";
+import { sharkdeskClerkAppearance } from "@/lib/clerk-appearance";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -16,15 +17,6 @@ export const metadata: Metadata = {
   icons: {
     icon: SHARKDESK_LOGO_URL,
     apple: SHARKDESK_LOGO_URL,
-  },
-};
-
-/** Hides phone UI in embedded Clerk components (India has limited Clerk phone/SMS support). */
-const clerkAppearance = {
-  elements: {
-    userProfilePage__phoneNumbers: {
-      display: "none",
-    },
   },
 };
 
@@ -61,7 +53,7 @@ export default function RootLayout({
     >
       <body className="h-full text-text-primary overflow-hidden">
         <ClerkProvider
-          appearance={clerkAppearance}
+          appearance={sharkdeskClerkAppearance}
           signInFallbackRedirectUrl={redirects.signInFallbackRedirectUrl}
           signUpFallbackRedirectUrl={redirects.signUpFallbackRedirectUrl}
         >

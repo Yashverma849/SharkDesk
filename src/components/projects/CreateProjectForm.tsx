@@ -6,6 +6,7 @@ import { createProjectAction } from "@/app/actions/projects";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import { cn } from "@/lib/utils";
 import { Check, ChevronDown, Plus, Search } from "lucide-react";
 
@@ -278,8 +279,8 @@ export function CreateProjectForm({ addablePeople, orgConfigured }: Props) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Creating…" : "Create project"}
+            <Button type="submit" disabled={pending} aria-busy={pending}>
+              {pending ? <LogoLoader size="button" /> : "Create project"}
             </Button>
           </div>
         </form>

@@ -8,6 +8,7 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import { createTaskAction } from "@/app/actions/tasks";
 import { ProjectPeoplePanel } from "./project-people-panel";
 
@@ -169,8 +170,8 @@ export function ProjectDetailClient({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Create task"}
+            <Button type="submit" disabled={pending} aria-busy={pending}>
+              {pending ? <LogoLoader size="button" /> : "Create task"}
             </Button>
           </div>
         </form>

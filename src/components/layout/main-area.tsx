@@ -19,7 +19,9 @@ export function MainArea({ children }: { children: React.ReactNode }) {
         paddingLeft: collapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_EXPANDED_W,
       }}
     >
-      <div className="min-h-full p-8 max-w-6xl mx-auto">{children}</div>
+      <div className="flex min-h-full flex-col p-8 max-w-6xl mx-auto">
+        {children}
+      </div>
     </main>
   );
 }
