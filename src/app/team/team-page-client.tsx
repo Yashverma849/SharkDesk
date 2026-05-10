@@ -8,8 +8,30 @@ import {
 } from "@clerk/nextjs";
 import { Users } from "lucide-react";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { mergeSharkdeskAppearance } from "@/lib/clerk-appearance";
 import { cn } from "@/lib/utils";
 import { formatOrganizationRole } from "@/lib/clerk-org-role";
+
+const orgSwitcherNoOrgAppearance = mergeSharkdeskAppearance({
+  elements: {
+    rootBox: "w-full max-w-full",
+    organizationSwitcherTrigger:
+      "w-full justify-between rounded-lg border border-[#1F2937] bg-[#0B0F1A] px-3 py-2 text-sm !text-white hover:bg-[#121826] focus:shadow-none transition-colors",
+    organizationPreviewMainIdentifier: "!text-white font-medium",
+    organizationSwitcherTriggerIcon: "!text-[#9CA3AF]",
+    organizationPreviewSecondaryIdentifier: "!text-[#9CA3AF]",
+  },
+});
+
+const orgSwitcherWithOrgAppearance = mergeSharkdeskAppearance({
+  elements: {
+    organizationSwitcherTrigger:
+      "rounded-lg border border-[#1F2937] bg-[#121826] px-3 py-2 text-sm !text-white hover:bg-[#1a2235] focus:shadow-none transition-colors",
+    organizationPreviewMainIdentifier: "!text-white font-medium",
+    organizationSwitcherTriggerIcon: "!text-[#9CA3AF]",
+    organizationPreviewSecondaryIdentifier: "!text-[#9CA3AF]",
+  },
+});
 
 const TABS = [
   { id: "overview" as const, label: "Overview" },
@@ -49,13 +71,7 @@ export function TeamPageClient() {
           <OrganizationSwitcher
             hidePersonal
             afterSelectOrganizationUrl="/team"
-            appearance={{
-              elements: {
-                rootBox: "w-full max-w-full",
-                organizationSwitcherTrigger:
-                  "w-full justify-between rounded-lg border border-[#1F2937] bg-[#0B0F1A] px-3 py-2 text-sm text-white",
-              },
-            }}
+            appearance={orgSwitcherNoOrgAppearance}
           />
         </div>
       </div>
@@ -80,12 +96,7 @@ export function TeamPageClient() {
         <OrganizationSwitcher
           hidePersonal
           afterSelectOrganizationUrl="/team"
-          appearance={{
-            elements: {
-              organizationSwitcherTrigger:
-                "rounded-lg border border-[#1F2937] bg-[#121826] px-3 py-2 text-sm text-white hover:bg-[#1a2235]",
-            },
-          }}
+          appearance={orgSwitcherWithOrgAppearance}
         />
       </div>
 

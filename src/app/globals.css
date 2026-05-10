@@ -21,6 +21,10 @@
 :root {
   --background: var(--color-navy-deep);
   --foreground: var(--color-text-primary);
+  /* Clerk — ensure portals/modals inherit light text (matches SharkDesk appearance prop). */
+  --clerk-color-foreground: #e5e7eb;
+  --clerk-color-muted-foreground: #9ca3af;
+  --clerk-color-primary-foreground: #f9fafb;
 }
 
 body {
