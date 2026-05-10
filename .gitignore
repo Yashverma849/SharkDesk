@@ -42,5 +42,6 @@ next-env.d.ts
 
 # Cursor IDE / local agent instructions (keep out of the remote repo)
 .cursor/
+.agents/
 AGENTS.md
 CLAUDE.md
