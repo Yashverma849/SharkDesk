@@ -11,13 +11,10 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+/** Tab + Apple touch icons use the same asset as the in-app logo (`SHARKDESK_LOGO_URL`). */
 export const metadata: Metadata = {
   title: "Shark Desk",
   description: "Minimal internal tool for project tracking",
-  icons: {
-    icon: SHARKDESK_LOGO_URL,
-    apple: SHARKDESK_LOGO_URL,
-  },
 };
 
 /** After sign-in / sign-up / magic link — absolute URL on prod helps Clerk send users back to your deployment. */
