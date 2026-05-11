@@ -1,4 +1,6 @@
 import type { Task } from "@/components/ui/TaskTable";
+import type { TaskStatusDb } from "@/lib/task-status";
+import { formatTaskStatusLabel } from "@/lib/task-status";
 
 export type DbProjectRow = {
   id: string;
@@ -17,7 +19,7 @@ export type DbTaskRow = {
   assignee_clerk_user_id: string | null;
   due_date: string | null;
   priority: "low" | "medium" | "high";
-  status: "todo" | "in_progress" | "done";
+  status: TaskStatusDb;
   created_by_clerk_user_id: string | null;
   sort_order: number;
   created_at: string;
@@ -54,12 +56,7 @@ export function formatPriorityUi(p: DbTaskRow["priority"]): string {
 }
 
 export function formatTaskStatusUi(s: DbTaskRow["status"]): string {
-  const map = {
-    todo: "Todo",
-    in_progress: "In Progress",
-    done: "Done",
-  } as const;
-  return map[s];
+  return formatTaskStatusLabel(s);
 }
 
 export function mapDbTaskToUi(
@@ -73,6 +70,7 @@ export function mapDbTaskToUi(
       ? assigneeNames[row.assignee_clerk_user_id] ??
         row.assignee_clerk_user_id.slice(0, 8) + "…"
       : "Unassigned",
+    assigneeId: row.assignee_clerk_user_id,
     dueDate: formatDueDate(row.due_date),
     priority: formatPriorityUi(row.priority),
     status: formatTaskStatusUi(row.status),

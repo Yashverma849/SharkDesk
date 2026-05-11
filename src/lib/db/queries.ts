@@ -133,6 +133,28 @@ export async function fetchTasksForProject(
   return (data ?? []) as DbTaskRow[];
 }
 
+/** Extra collaborators per task (not including primary assignee). */
+export async function fetchTaskMembersByTaskIds(
+  supabase: SupabaseClient,
+  taskIds: string[],
+): Promise<Map<string, string[]>> {
+  if (taskIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from("task_members")
+    .select("task_id, clerk_user_id")
+    .in("task_id", taskIds);
+
+  if (error) throw error;
+  const map = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    const r = row as { task_id: string; clerk_user_id: string };
+    const list = map.get(r.task_id) ?? [];
+    list.push(r.clerk_user_id);
+    map.set(r.task_id, list);
+  }
+  return map;
+}
+
 export async function fetchTasksAssignedToUser(
   supabase: SupabaseClient,
   assigneeClerkUserId: string,
@@ -164,28 +186,26 @@ export async function fetchTasksAssignedToUser(
   }));
 }
 
+export type ActivityEventRow = {
+  id: string;
+  summary: string;
+  created_at: string;
+  event_type: string | null;
+  project_id: string | null;
+};
+
 export async function fetchActivityForOwner(
   supabase: SupabaseClient,
   ownerClerkUserId: string,
-  limit = 50,
-): Promise<
-  {
-    id: string;
-    summary: string;
-    created_at: string;
-  }[]
-> {
+  limit = 120,
+): Promise<ActivityEventRow[]> {
   const { data, error } = await supabase
     .from("activity_events")
-    .select("id, summary, created_at")
+    .select("id, summary, created_at, event_type, project_id")
     .eq("owner_clerk_user_id", ownerClerkUserId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as {
-    id: string;
-    summary: string;
-    created_at: string;
-  }[];
+  return (data ?? []) as ActivityEventRow[];
 }

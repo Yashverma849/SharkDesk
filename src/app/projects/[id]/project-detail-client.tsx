@@ -3,7 +3,11 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TaskTable, type Task } from "@/components/ui/TaskTable";
+import {
+  TaskTable,
+  type Task,
+  type PersonMini,
+} from "@/components/ui/TaskTable";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -21,6 +25,7 @@ type Props = {
   projectStatusLabel: string;
   initialTasks: Task[];
   assigneeOptions: AssigneeOption[];
+  peopleByUserId: Record<string, PersonMini>;
   ownerUserId: string;
   isOwner: boolean;
   people: {
@@ -37,6 +42,7 @@ export function ProjectDetailClient({
   projectStatusLabel,
   initialTasks,
   assigneeOptions,
+  peopleByUserId,
   ownerUserId,
   isOwner,
   people,
@@ -99,7 +105,12 @@ export function ProjectDetailClient({
         </div>
       </div>
 
-      <TaskTable tasks={initialTasks} showAssignee={true} />
+      <TaskTable
+        tasks={initialTasks}
+        showAssignee={true}
+        assigneeOptions={assigneeOptions}
+        peopleByUserId={peopleByUserId}
+      />
 
       <Modal
         isOpen={open}

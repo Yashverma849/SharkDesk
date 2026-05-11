@@ -5,6 +5,7 @@ import {
   fetchProjectRowIfAccessible,
   fetchTasksForProject,
   fetchProjectMemberClerkIds,
+  fetchTaskMembersByTaskIds,
 } from "@/lib/db/queries";
 import {
   mapDbTaskToUi,
@@ -82,7 +83,21 @@ export default async function ProjectDetailPage({
   const rows = await fetchTasksForProject(ctx.supabase, id);
   const taskAssigneeIds = rows.map((r) => r.assignee_clerk_user_id);
   const taskNames = await resolveAssigneeNames(taskAssigneeIds);
-  const initialTasks = rows.map((r) => mapDbTaskToUi(r, taskNames));
+  const taskMembersMap = await fetchTaskMembersByTaskIds(
+    ctx.supabase,
+    rows.map((r) => r.id),
+  );
+  const initialTasks = rows.map((r) => ({
+    ...mapDbTaskToUi(r, taskNames),
+    extraMemberIds: taskMembersMap.get(r.id) ?? [],
+  }));
+
+  const peopleByUserId = Object.fromEntries(
+    membersOrdered.map((m) => [
+      m.userId,
+      { label: m.label, imageUrl: m.imageUrl },
+    ]),
+  );
 
   const isOwner = project.owner_clerk_user_id === ctx.userId;
 
@@ -94,6 +109,7 @@ export default async function ProjectDetailPage({
       projectStatusLabel={formatProjectStatusUi(project.status)}
       initialTasks={initialTasks}
       assigneeOptions={assigneeOptions}
+      peopleByUserId={peopleByUserId}
       ownerUserId={project.owner_clerk_user_id}
       isOwner={isOwner}
       people={{
