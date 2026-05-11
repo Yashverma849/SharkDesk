@@ -33,6 +33,8 @@ export async function createTaskAction(
   if (!ctx) return { error: "Sign in required." };
 
   const title = String(formData.get("title") ?? "").trim();
+  const commentRaw = String(formData.get("comment") ?? "").trim();
+  const comment = commentRaw === "" ? null : commentRaw;
   const projectId = String(formData.get("project_id") ?? "").trim();
   if (!title) return { error: "Task title is required." };
   if (!projectId) return { error: "Project is required." };
@@ -73,21 +75,49 @@ export async function createTaskAction(
 
   const priority = parsePriority(formData.get("priority"));
 
-  const { data: task, error: te } = await ctx.supabase
+  const baseInsert = {
+    project_id: projectId,
+    title,
+    assignee_clerk_user_id,
+    due_date,
+    priority,
+    status: "todo" as const,
+    created_by_clerk_user_id: ctx.userId,
+  };
+
+  // Comment is optional. If remote schema cache is stale/missing this column,
+  // retry without comment so task creation still succeeds.
+  let task: { id: string } | null = null;
+  let te: { message: string; code?: string } | null = null;
+
+  const firstAttempt = await ctx.supabase
     .from("tasks")
     .insert({
-      project_id: projectId,
-      title,
-      assignee_clerk_user_id,
-      due_date,
-      priority,
-      status: "todo",
-      created_by_clerk_user_id: ctx.userId,
+      ...baseInsert,
+      ...(comment ? { comment } : {}),
     })
     .select("id")
     .single();
 
-  if (te) return { error: te.message };
+  task = firstAttempt.data;
+  te = firstAttempt.error as { message: string; code?: string } | null;
+
+  const missingCommentColumn =
+    !!te &&
+    (te.code === "PGRST204" ||
+      te.message.toLowerCase().includes("could not find the 'comment' column"));
+
+  if (missingCommentColumn) {
+    const fallbackAttempt = await ctx.supabase
+      .from("tasks")
+      .insert(baseInsert)
+      .select("id")
+      .single();
+    task = fallbackAttempt.data;
+    te = fallbackAttempt.error as { message: string; code?: string } | null;
+  }
+
+  if (te || !task) return { error: te?.message ?? "Failed to create task." };
 
   await ctx.supabase.from("activity_events").insert({
     owner_clerk_user_id: ctx.userId,
@@ -317,6 +347,56 @@ export async function updateTaskStatusAction(
     summary: `Task "${task.title}" status changed to ${statusUi}.`,
     actor_clerk_user_id: ctx.userId,
     event_type: "task_status_changed",
+  });
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${task.project_id}`);
+  revalidatePath("/my-work");
+  revalidatePath("/activity");
+
+  return { ok: true };
+}
+
+export async function updateTaskCommentAction(
+  taskId: string,
+  commentInput: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  const ctx = await getSupabaseAdminForUser();
+  if (!ctx) return { error: "Sign in required." };
+
+  const commentTrimmed = commentInput.trim();
+  const comment = commentTrimmed === "" ? null : commentTrimmed;
+
+  const { data: task, error: te } = await ctx.supabase
+    .from("tasks")
+    .select("project_id, title, comment")
+    .eq("id", taskId)
+    .single();
+
+  if (te || !task) return { error: "Task not found." };
+
+  const allowed = await userHasProjectAccess(
+    ctx.supabase,
+    task.project_id,
+    ctx.userId,
+  );
+  if (!allowed) return { error: "You don't have access to this project." };
+
+  if ((task.comment ?? null) === comment) return { ok: true };
+
+  const { error: ue } = await ctx.supabase
+    .from("tasks")
+    .update({ comment })
+    .eq("id", taskId);
+  if (ue) return { error: ue.message };
+
+  await ctx.supabase.from("activity_events").insert({
+    owner_clerk_user_id: ctx.userId,
+    project_id: task.project_id,
+    task_id: taskId,
+    summary: `Task "${task.title}" comment updated.`,
+    actor_clerk_user_id: ctx.userId,
+    event_type: "task_comment_updated",
   });
 
   revalidatePath("/projects");

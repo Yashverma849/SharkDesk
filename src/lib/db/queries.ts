@@ -157,16 +157,49 @@ export async function fetchTaskMembersByTaskIds(
 
 export async function fetchTasksAssignedToUser(
   supabase: SupabaseClient,
-  assigneeClerkUserId: string,
+  clerkUserId: string,
 ): Promise<{ task: DbTaskRow; projectName: string }[]> {
-  const { data: tasks, error } = await supabase
+  // 1. Get tasks where user is primary assignee
+  const { data: assignedTasks, error: e1 } = await supabase
     .from("tasks")
     .select("*")
-    .eq("assignee_clerk_user_id", assigneeClerkUserId)
-    .order("due_date", { ascending: true, nullsFirst: false });
+    .eq("assignee_clerk_user_id", clerkUserId);
 
-  if (error) throw error;
-  const list = (tasks ?? []) as DbTaskRow[];
+  if (e1) throw e1;
+
+  // 2. Get task IDs where user is a member/collaborator
+  const { data: memberRows, error: e2 } = await supabase
+    .from("task_members")
+    .select("task_id")
+    .eq("clerk_user_id", clerkUserId);
+
+  if (e2) throw e2;
+
+  const memberTaskIds = (memberRows ?? []).map((r) => r.task_id);
+  
+  // 3. Fetch the actual tasks for those memberships if any
+  let collaboratedTasks: DbTaskRow[] = [];
+  if (memberTaskIds.length > 0) {
+    const { data: ct, error: e3 } = await supabase
+      .from("tasks")
+      .select("*")
+      .in("id", memberTaskIds);
+    if (e3) throw e3;
+    collaboratedTasks = (ct ?? []) as DbTaskRow[];
+  }
+
+  // 4. Merge and deduplicate
+  const allTasksMap = new Map<string, DbTaskRow>();
+  for (const t of (assignedTasks ?? []) as DbTaskRow[]) allTasksMap.set(t.id, t);
+  for (const t of collaboratedTasks) allTasksMap.set(t.id, t);
+  
+  const list = Array.from(allTasksMap.values());
+  list.sort((a, b) => {
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+  });
+
   const projectIds = [...new Set(list.map((t) => t.project_id))];
   if (projectIds.length === 0) return [];
 
@@ -208,4 +241,48 @@ export async function fetchActivityForOwner(
 
   if (error) throw error;
   return (data ?? []) as ActivityEventRow[];
+}
+
+export async function fetchReadActivityIdsForUser(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("notification_reads")
+    .select("activity_event_id")
+    .eq("clerk_user_id", clerkUserId);
+
+  // Graceful fallback: if read-tracking table is not migrated yet, treat all as unread.
+  if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "42P01") return new Set();
+    throw error;
+  }
+  return new Set(
+    (data ?? []).map(
+      (r) => (r as { activity_event_id: string }).activity_event_id,
+    ),
+  );
+}
+
+export async function markNotificationReadForUser(
+  supabase: SupabaseClient,
+  clerkUserId: string,
+  activityEventId: string,
+): Promise<void> {
+  const { error } = await supabase.from("notification_reads").upsert(
+    {
+      activity_event_id: activityEventId,
+      clerk_user_id: clerkUserId,
+      read_at: new Date().toISOString(),
+    },
+    { onConflict: "activity_event_id,clerk_user_id" },
+  );
+
+  // If migration is missing, skip hard-failing the UI action.
+  if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "42P01") return;
+    throw error;
+  }
 }

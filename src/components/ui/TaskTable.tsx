@@ -1,6 +1,14 @@
 "use client";
 
-import { User, Calendar, Flag, ChevronDown, Plus, X } from "lucide-react";
+import {
+  User,
+  Calendar,
+  Flag,
+  ChevronDown,
+  Plus,
+  X,
+  MessageSquarePlus,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -16,15 +24,19 @@ import {
   addTaskMemberAction,
   removeTaskMemberAction,
   updateTaskStatusAction,
+  updateTaskCommentAction,
 } from "@/app/actions/tasks";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { TASK_STATUSES } from "@/lib/task-status";
+import { cn } from "@/lib/utils";
 
 export type PersonMini = { label: string; imageUrl: string | null };
 
 export type Task = {
   id: string | number;
   name: string;
+  comment?: string | null;
   assignee?: string;
   assigneeId?: string | null;
   /** Collaborators beyond primary assignee (Clerk user ids). */
@@ -99,6 +111,8 @@ export function TaskTable({
     left: number;
     width: number;
   } | null>(null);
+  const [commentModalTask, setCommentModalTask] = useState<Task | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
   const activeMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const [showAddMemberPicker, setShowAddMemberPicker] = useState(false);
@@ -158,6 +172,21 @@ export function TaskTable({
   const handleStatusChange = (taskId: string | number, statusUi: string) => {
     startTransition(async () => {
       await updateTaskStatusAction(String(taskId), statusUi);
+      router.refresh();
+    });
+  };
+
+  const openCommentModal = (task: Task) => {
+    setCommentModalTask(task);
+    setCommentDraft(task.comment ?? "");
+  };
+
+  const handleSaveComment = () => {
+    if (!commentModalTask) return;
+    startTransition(async () => {
+      await updateTaskCommentAction(String(commentModalTask.id), commentDraft);
+      setCommentModalTask(null);
+      setCommentDraft("");
       router.refresh();
     });
   };
@@ -376,23 +405,148 @@ export function TaskTable({
       : null;
 
   return (
-    <div className="bg-[#121826] border border-[#1F2937] rounded-xl">
+    <div className="bg-[#121826] border border-[#1F2937] rounded-xl overflow-hidden">
       {teamDropdownPortal}
-      <div className="overflow-x-auto overflow-y-visible">
+      
+      {/* Mobile Stacked View */}
+      <div className="block sm:hidden divide-y divide-[#1F2937]">
+        {tasks.map((task) => (
+          <div key={task.id} className="p-4 space-y-4 hover:bg-[#1F2937]/30 transition-colors">
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-bold text-[#E5E7EB] leading-snug">
+                  {task.name}
+                </h4>
+                {task.comment ? (
+                  <p className="mt-1 line-clamp-2 text-xs text-[#9CA3AF]">
+                    {task.comment}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => openCommentModal(task)}
+                    className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-[#1F2937] px-2 py-1 text-[11px] text-[#9CA3AF] hover:border-[#14B8A6]/50 hover:text-[#14B8A6] disabled:opacity-50"
+                  >
+                    <MessageSquarePlus className="h-3.5 w-3.5" />
+                    Add comment
+                  </button>
+                )}
+              </div>
+              <div className={cn("shrink-0 h-2 w-2 rounded-full mt-1.5", 
+                task.priority === "High" ? "bg-rose-400" : task.priority === "Medium" ? "bg-amber-400" : "bg-[#9CA3AF]"
+              )} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold">Status</p>
+                <select
+                  className={cn("w-full rounded-lg border border-[#1F2937] bg-[#0B0F1A] px-2 py-1.5 text-xs font-bold focus:outline-none transition-colors", getStatusColor(task.status))}
+                  value={task.status}
+                  onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                  disabled={isPending}
+                >
+                  {TASK_STATUSES.map((s) => (
+                    <option key={s.db} value={s.label}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold">Due Date</p>
+                <div className="flex items-center gap-1.5 text-xs text-[#E5E7EB]">
+                  <Calendar className="w-3 h-3 text-[#9CA3AF]" />
+                  {task.dueDate}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]/50">
+              {showAssignee ? (
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold mr-1">Assignee</p>
+                  {peopleByUserId ? (
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        activeMenuButtonRef.current = e.currentTarget;
+                        setOpenMenuTaskId(task.id);
+                        const r = e.currentTarget.getBoundingClientRect();
+                        setMenuBox({ top: r.bottom + 6, left: Math.max(8, r.left - 200), width: 288 });
+                      }}
+                      className="flex -space-x-2"
+                    >
+                      {orderedMemberIds(task).length === 0 ? (
+                        <div className="h-6 w-6 rounded-full border border-[#1F2937] bg-[#0B0F1A] flex items-center justify-center">
+                          <User className="h-3 w-3 text-[#9CA3AF]" />
+                        </div>
+                      ) : (
+                        orderedMemberIds(task).slice(0, 3).map((uid) => (
+                          <Avatar key={uid} userId={uid} peopleByUserId={peopleByUserId} size="sm" />
+                        ))
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-[#E5E7EB]">
+                      <div className="w-5 h-5 rounded-full bg-[#0B0F1A] border border-[#1F2937] flex items-center justify-center">
+                        <User className="w-3 h-3 text-[#9CA3AF]" />
+                      </div>
+                      {task.assignee || 'Unassigned'}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div />
+              )}
+              <div className="flex items-center gap-1.5">
+                <Flag className={cn("w-3 h-3", getPriorityColor(task.priority))} />
+                <span className={cn("text-[10px] font-bold uppercase", getPriorityColor(task.priority))}>{task.priority}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden sm:block overflow-x-auto overflow-y-visible">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-[#121826] border-b border-[#1F2937]">
             <tr>
-              <th className="px-4 py-3 font-medium text-[#9CA3AF]">Task Name</th>
-              {showAssignee && <th className="px-4 py-3 font-medium text-[#9CA3AF]">Assigned To</th>}
-              <th className="px-4 py-3 font-medium text-[#9CA3AF]">Due Date</th>
-              <th className="px-4 py-3 font-medium text-[#9CA3AF]">Priority</th>
-              <th className="px-4 py-3 font-medium text-[#9CA3AF]">Status</th>
+              <th className="px-6 py-4 font-bold text-[#9CA3AF] text-[10px] uppercase tracking-wider">Task Name</th>
+              <th className="px-6 py-4 font-bold text-[#9CA3AF] text-[10px] uppercase tracking-wider">Comment</th>
+              {showAssignee && <th className="px-6 py-4 font-bold text-[#9CA3AF] text-[10px] uppercase tracking-wider">Assigned To</th>}
+              <th className="px-6 py-4 font-bold text-[#9CA3AF] text-[10px] uppercase tracking-wider">Due Date</th>
+              <th className="px-6 py-4 font-bold text-[#9CA3AF] text-[10px] uppercase tracking-wider">Priority</th>
+              <th className="px-6 py-4 font-bold text-[#9CA3AF] text-[10px] uppercase tracking-wider text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#1F2937]">
             {tasks.map((task) => (
-              <tr key={task.id} className="h-12 hover:bg-[#1F2937] transition-colors cursor-pointer group">
-                <td className="px-4 text-[#E5E7EB] font-medium">{task.name}</td>
+              <tr key={task.id} className="h-16 hover:bg-[#1F2937]/50 transition-colors cursor-pointer group">
+                <td className="px-6 text-[#E5E7EB] font-semibold max-w-[200px]">
+                  <div className="truncate" title={task.name}>{task.name}</div>
+                </td>
+                <td className="px-6 text-[#9CA3AF] max-w-[320px]">
+                  {task.comment && task.comment.trim() !== "" ? (
+                    <div className="truncate" title={task.comment}>
+                      {task.comment}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => openCommentModal(task)}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-[#1F2937] px-2 py-1 text-xs text-[#9CA3AF] hover:border-[#14B8A6]/50 hover:text-[#14B8A6] disabled:opacity-50"
+                      title="Add comment"
+                    >
+                      <MessageSquarePlus className="h-3.5 w-3.5" />
+                      Add comment
+                    </button>
+                  )}
+                </td>
                 {showAssignee && (
                   <td className="px-4 py-2" onClick={(e) => {
                     if ((e.target as HTMLElement).tagName === 'SELECT') {
@@ -507,48 +661,84 @@ export function TaskTable({
                     )}
                   </td>
                 )}
-                <td className="px-4 text-[#9CA3AF]">
-                  <div className="flex items-center gap-2">
+                <td className="px-6 text-[#9CA3AF]">
+                  <div className="flex items-center gap-2 text-xs">
                     <Calendar className="w-3.5 h-3.5" />
                     {task.dueDate}
                   </div>
                 </td>
-                <td className="px-4">
+                <td className="px-6">
                   <div className="flex items-center gap-2">
                     <Flag className={`w-3.5 h-3.5 ${getPriorityColor(task.priority)}`} />
-                    <span className={getPriorityColor(task.priority)}>{task.priority}</span>
+                    <span className={`text-xs font-bold uppercase ${getPriorityColor(task.priority)}`}>{task.priority}</span>
                   </div>
                 </td>
-                <td className="px-4">
-                  {assigneeOptions ? (
-                    <select
-                      className={`max-w-[11rem] truncate rounded-md border border-[#1F2937] bg-[#121826] px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#14B8A6] disabled:opacity-50 ${getStatusColor(task.status)}`}
-                      value={task.status}
-                      onChange={(e) =>
-                        handleStatusChange(task.id, e.target.value)
-                      }
-                      onClick={(e) => e.stopPropagation()}
-                      disabled={isPending}
-                    >
-                      {TASK_STATUSES.map((s) => (
-                        <option key={s.db} value={s.label}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span
-                      className={`font-medium ${getStatusColor(task.status)}`}
-                    >
-                      {task.status}
-                    </span>
-                  )}
+                <td className="px-6 text-right">
+                  <select
+                    className={`max-w-[11rem] truncate rounded-lg border border-[#1F2937] bg-[#0B0F1A] px-3 py-1.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#14B8A6] disabled:opacity-50 transition-all ${getStatusColor(task.status)}`}
+                    value={task.status}
+                    onChange={(e) =>
+                      handleStatusChange(task.id, e.target.value)
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                    disabled={isPending}
+                  >
+                    {TASK_STATUSES.map((s) => (
+                      <option key={s.db} value={s.label}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <Modal
+        isOpen={commentModalTask !== null}
+        onClose={() => {
+          if (isPending) return;
+          setCommentModalTask(null);
+          setCommentDraft("");
+        }}
+        title={commentModalTask?.comment ? "Edit Comment" : "Add Comment"}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-[#9CA3AF]">
+            {commentModalTask?.name}
+          </p>
+          <textarea
+            value={commentDraft}
+            onChange={(e) => setCommentDraft(e.target.value)}
+            rows={5}
+            disabled={isPending}
+            placeholder="Add detailed comment for this task..."
+            className="w-full resize-y rounded-lg border border-[#1F2937] bg-[#121826] px-3 py-2 text-sm text-white placeholder:text-[#6B7280] focus:outline-none focus:ring-1 focus:ring-[#14B8A6] disabled:opacity-60"
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={isPending}
+              onClick={() => {
+                setCommentModalTask(null);
+                setCommentDraft("");
+              }}
+              className="text-[#9CA3AF] hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={handleSaveComment}
+            >
+              Save comment
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

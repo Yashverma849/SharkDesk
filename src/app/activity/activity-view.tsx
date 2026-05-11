@@ -143,7 +143,7 @@ export function ActivityView({ items, projectNames }: Props) {
   }, [items, projectNames]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex flex-col">
       {/* Activity pie chart cards (disabled — uncomment block below to restore)
       {mounted ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -175,17 +175,17 @@ export function ActivityView({ items, projectNames }: Props) {
       )}
       */}
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-col">
         <h2 className="mb-3 shrink-0 text-lg font-semibold text-[#E5E7EB]">
           Activity log
         </h2>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#1F2937] bg-[#121826]">
+        <div className="flex flex-col overflow-hidden rounded-xl border border-[#1F2937] bg-[#121826]">
           {items.length === 0 ? (
-            <div className="flex min-h-[12rem] flex-1 items-center justify-center p-12 text-center text-sm text-[#9CA3AF]">
+            <div className="flex min-h-[12rem] items-center justify-center p-12 text-center text-sm text-[#9CA3AF]">
               No activity yet. Creating projects and tasks will show up here.
             </div>
           ) : (
-            <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-y-contain">
+            <div className="max-h-[calc(100dvh-14rem)] overflow-x-auto overflow-y-auto overscroll-y-contain">
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead className="sticky top-0 z-10 border-b border-[#1F2937] bg-[#0B0F1A]">
                   <tr>

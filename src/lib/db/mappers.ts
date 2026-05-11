@@ -16,6 +16,7 @@ export type DbTaskRow = {
   id: string;
   project_id: string;
   title: string;
+  comment: string | null;
   assignee_clerk_user_id: string | null;
   due_date: string | null;
   priority: "low" | "medium" | "high";
@@ -66,6 +67,7 @@ export function mapDbTaskToUi(
   return {
     id: row.id,
     name: row.title,
+    comment: row.comment,
     assignee: row.assignee_clerk_user_id
       ? assigneeNames[row.assignee_clerk_user_id] ??
         row.assignee_clerk_user_id.slice(0, 8) + "…"

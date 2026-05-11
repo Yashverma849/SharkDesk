@@ -30,19 +30,16 @@ export function MyWorkClient({ initialTasks, projects }: Props) {
 
   return (
     <div className="flex flex-col min-h-full w-full animate-in fade-in duration-300">
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">
-            My Work
-          </h1>
-          <p className="text-[#9CA3AF] font-medium text-sm">
+          <p className="text-[#9CA3AF] font-bold text-lg tracking-tight">
             Tasks assigned to you
           </p>
         </div>
         <Button
           onClick={() => setOpen(true)}
           size="sm"
-          className="h-9"
+          className="h-9 w-fit"
           disabled={projects.length === 0}
         >
           <Plus className="mr-1.5 h-4 w-4" />
